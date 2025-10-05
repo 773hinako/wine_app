@@ -1,0 +1,24 @@
+{
+  "name": "wine",
+  "version": "1.0.0",
+  "description": "スマートフォンやブラウザで使えるワイン記録アプリです。飲んだワインの写真、情報、テイスティングメモを簡単に記録・管理できます。",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo 'Web files are ready in www/'",
+    "sync": "npx cap sync",
+    "sync:ios": "npx cap sync ios",
+    "open:ios": "npx cap open ios",
+    "copy": "npx cap copy",
+    "update": "npx cap update"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3"
+  }
+}
