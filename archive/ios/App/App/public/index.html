@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ワイン記録">
+    <title>ワイン記録</title>
+
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #FFB6D9;
+    --primary-dark: #FF99CC;
+    --secondary-color: #D4B5F2;
+    --accent-color: #B5E5CF;
+    --background: linear-gradient(135deg, #FFF5F7 0%, #FFF0F8 50%, #F5F0FF 100%);
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --text-primary: #5A5A5A;
+    --text-secondary: #9B9B9B;
+    --border: #FFE4F0;
+    --shadow: rgba(255, 182, 217, 0.3);
+    --shadow-strong: rgba(255, 182, 217, 0.5);
+    --star-color: #FFD1E8;
+    --star-filled: #FF69B4;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+    background: var(--background);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* スクリーン管理 */
+.screen {
+    display: none;
+    min-height: 100vh;
+    padding-bottom: 80px;
+}
+
+.screen.active {
+    display: block;
+}
+
+/* ヘッダー */
+header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px var(--shadow-strong);
+    border-radius: 0 0 20px 20px;
+}
+
+header h1 {
+    font-size: 1.25rem;
+    flex: 1;
+    text-align: center;
+    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.5px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.icon-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+/* 検索 */
+.search-container {
+    padding: 1rem;
+    background: transparent;
+}
+
+#search-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 25px;
+    font-size: 1rem;
+    background: var(--card-bg);
+    box-shadow: 0 4px 15px var(--shadow);
+    transition: all 0.3s ease;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 20px var(--shadow-strong);
+    transform: translateY(-2px);
+}
+
+/* ワインリスト */
+.wine-list {
+    padding: 1rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.wine-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 1rem;
+    box-shadow: 0 8px 25px var(--shadow);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    gap: 1rem;
+    border: 2px solid transparent;
+    backdrop-filter: blur(10px);
+}
+
+.wine-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px var(--shadow-strong);
+    border-color: var(--primary-color);
+}
+
+.wine-card-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 15px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #FFE4F0 0%, #E8D4F2 100%);
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px var(--shadow);
+}
+
+.wine-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.wine-card-name {
+    font-size: 1.125rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wine-card-meta {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.wine-card-rating {
+    color: var(--star-filled);
+    font-size: 1rem;
+    text-shadow: 0 2px 5px var(--shadow);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    font-size: 1.125rem;
+    margin-top: 1rem;
+}
+
+/* FAB (Floating Action Button) */
+.fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    box-shadow: 0 8px 25px var(--shadow-strong);
+    transition: all 0.3s ease;
+    z-index: 50;
+}
+
+.fab:hover {
+    transform: scale(1.15) rotate(90deg);
+    box-shadow: 0 12px 35px var(--shadow-strong);
+}
+
+/* フォーム */
+.wine-form {
+    padding: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.photo-section {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.photo-preview {
+    width: 100%;
+    max-width: 300px;
+    height: 300px;
+    margin: 0 auto 1rem;
+    border: 3px dashed var(--primary-color);
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, #FFE4F0 0%, #E8D4F2 100%);
+    box-shadow: 0 8px 25px var(--shadow);
+    transition: all 0.3s ease;
+}
+
+.photo-preview:hover {
+    border-color: var(--secondary-color);
+    transform: scale(1.02);
+}
+
+.photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-placeholder {
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 15px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--card-bg);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px var(--shadow);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 20px var(--shadow-strong);
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+/* 星評価 */
+.rating-input {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 2.5rem;
+}
+
+.star {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+    color: var(--star-color);
+    filter: drop-shadow(0 2px 5px var(--shadow));
+}
+
+.star:hover {
+    transform: scale(1.3) rotate(-15deg);
+    color: var(--star-filled);
+}
+
+.star.active {
+    color: var(--star-filled);
+    animation: starPulse 0.5s ease;
+}
+
+@keyframes starPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+}
+
+/* ボタン */
+.btn-primary,
+.btn-secondary {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px var(--shadow);
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    margin-top: 1rem;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px var(--shadow-strong);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #C9A8F0 100%);
+    color: white;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(212, 181, 242, 0.5);
+}
+
+/* 詳細表示 */
+.wine-detail {
+    padding: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.detail-photo {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 1.5rem;
+    border-radius: 25px;
+    box-shadow: 0 15px 40px var(--shadow-strong);
+    display: block;
+}
+
+.detail-section {
+    background: var(--card-bg);
+    border-radius: 25px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 8px 25px var(--shadow);
+    backdrop-filter: blur(10px);
+    border: 2px solid var(--border);
+}
+
+.detail-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.detail-row {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.detail-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.detail-value {
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.detail-rating {
+    color: var(--star-filled);
+    font-size: 2rem;
+    filter: drop-shadow(0 4px 10px var(--shadow));
+}
+
+.detail-notes {
+    white-space: pre-wrap;
+    line-height: 1.8;
+}
+
+/* レスポンシブ */
+@media (min-width: 768px) {
+    .wine-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .wine-list {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+}
+
+/* テイスティングセクション */
+.tasting-section {
+    background: var(--card-bg);
+    border-radius: 25px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: 0 8px 25px var(--shadow);
+    border: 2px solid var(--border);
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+}
+
+/* ラジオボタン */
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.radio-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--card-bg);
+    font-size: 0.95rem;
+}
+
+.radio-label:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(255, 182, 217, 0.1) 0%, rgba(212, 181, 242, 0.1) 100%);
+    transform: translateY(-2px);
+}
+
+.radio-label input[type="radio"] {
+    margin-right: 0.5rem;
+    accent-color: var(--primary-color);
+}
+
+.radio-label input[type="radio"]:checked + span,
+.radio-label:has(input[type="radio"]:checked) {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    font-weight: 600;
+}
+
+/* チェックボックス */
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--card-bg);
+    font-size: 0.95rem;
+}
+
+.checkbox-label:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(255, 182, 217, 0.1) 0%, rgba(212, 181, 242, 0.1) 100%);
+    transform: translateY(-2px);
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 0.5rem;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color);
+}
+
+.checkbox-label:has(input[type="checkbox"]:checked) {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(255, 182, 217, 0.2) 0%, rgba(212, 181, 242, 0.2) 100%);
+    font-weight: 600;
+}
+
+/* セレクトボックス */
+.select-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 15px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--card-bg);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px var(--shadow);
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.select-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 20px var(--shadow-strong);
+}
+
+.select-input option {
+    padding: 0.5rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+    .checkbox-group {
+        grid-template-columns: 1fr;
+    }
+
+    .radio-group {
+        flex-direction: column;
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- ホーム画面 -->
+    <div id="home-screen" class="screen active">
+        <header>
+            <h1>🍷 ワイン記録</h1>
+            <div class="header-actions">
+                <button id="export-btn" class="icon-btn" title="エクスポート">📤</button>
+                <button id="import-btn" class="icon-btn" title="インポート">📥</button>
+            </div>
+        </header>
+
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="🔍 ワイン名、産地、品種、メモで検索...">
+        </div>
+
+        <div id="wine-list" class="wine-list"></div>
+
+        <button id="add-wine-btn" class="fab">+</button>
+    </div>
+
+    <!-- 新規記録/編集画面 -->
+    <div id="edit-screen" class="screen">
+        <header>
+            <button id="back-btn" class="icon-btn">← 戻る</button>
+            <h1 id="edit-title">新規記録</h1>
+        </header>
+
+        <form id="wine-form" class="wine-form">
+            <div class="photo-section">
+                <div id="photo-preview" class="photo-preview">
+                    <span class="photo-placeholder">📷 写真を追加</span>
+                </div>
+                <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+                <button type="button" id="photo-btn" class="btn-secondary">写真を撮影/選択</button>
+            </div>
+
+            <div class="form-group">
+                <label for="wine-name">ワイン名 *</label>
+                <input type="text" id="wine-name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="producer">生産者/ワイナリー</label>
+                <input type="text" id="producer">
+            </div>
+
+            <div class="form-group">
+                <label for="region">産地</label>
+                <input type="text" id="region">
+            </div>
+
+            <div class="form-group">
+                <label for="variety">品種</label>
+                <input type="text" id="variety">
+            </div>
+
+            <div class="form-group">
+                <label for="vintage">ヴィンテージ（年）</label>
+                <input type="number" id="vintage" min="1900" max="2100">
+            </div>
+
+            <div class="form-group">
+                <label for="date">購入日/飲んだ日</label>
+                <input type="date" id="date">
+            </div>
+
+            <div class="form-group">
+                <label for="rating">評価</label>
+                <div class="rating-input">
+                    <span class="star" data-value="1">☆</span>
+                    <span class="star" data-value="2">☆</span>
+                    <span class="star" data-value="3">☆</span>
+                    <span class="star" data-value="4">☆</span>
+                    <span class="star" data-value="5">☆</span>
+                </div>
+                <input type="hidden" id="rating" value="0">
+            </div>
+
+            <!-- テイスティングメモ -->
+            <div class="tasting-section">
+                <h3 class="section-title">🍷 テイスティングメモ</h3>
+
+                <!-- ワインタイプ -->
+                <div class="form-group">
+                    <label>ワインタイプ</label>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="wine-type" value="red" checked> 赤</label>
+                        <label class="radio-label"><input type="radio" name="wine-type" value="white"> 白</label>
+                        <label class="radio-label"><input type="radio" name="wine-type" value="rose"> ロゼ</label>
+                        <label class="radio-label"><input type="radio" name="wine-type" value="sparkling"> スパークリング</label>
+                    </div>
+                </div>
+
+                <!-- 外観 -->
+                <div class="form-group">
+                    <label for="appearance-color">外観（色）</label>
+                    <select id="appearance-color" class="select-input">
+                        <option value="">選択してください</option>
+                        <optgroup label="赤ワイン">
+                            <option value="パープル">パープル（若い）</option>
+                            <option value="ルビー">ルビー</option>
+                            <option value="ガーネット">ガーネット</option>
+                            <option value="レンガ色">レンガ色（熟成）</option>
+                        </optgroup>
+                        <optgroup label="白ワイン">
+                            <option value="レモンイエロー">レモンイエロー（若い）</option>
+                            <option value="イエロー">イエロー</option>
+                            <option value="ゴールド">ゴールド</option>
+                            <option value="琥珀色">琥珀色（熟成）</option>
+                        </optgroup>
+                        <optgroup label="ロゼ">
+                            <option value="ピンク">ピンク</option>
+                            <option value="サーモンピンク">サーモンピンク</option>
+                            <option value="オレンジ">オレンジ</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- 香り -->
+                <div class="form-group">
+                    <label>香り（複数選択可）</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="ベリー系"> 🍓 ベリー系</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="シトラス"> 🍋 シトラス</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="トロピカル"> 🥭 トロピカル</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="リンゴ・洋梨"> 🍎 リンゴ・洋梨</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="花"> 🌸 花</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="ハーブ"> 🌿 ハーブ</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="スパイス"> ⭐ スパイス</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="オーク・バニラ"> 🪵 オーク・バニラ</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="土・きのこ"> 🍄 土・きのこ</label>
+                        <label class="checkbox-label"><input type="checkbox" name="aroma" value="ミネラル"> 💎 ミネラル</label>
+                    </div>
+                </div>
+
+                <!-- 味わい -->
+                <div class="form-group">
+                    <label for="taste-sweetness">甘さ</label>
+                    <select id="taste-sweetness" class="select-input">
+                        <option value="">選択してください</option>
+                        <option value="辛口">辛口</option>
+                        <option value="やや辛口">やや辛口</option>
+                        <option value="やや甘口">やや甘口</option>
+                        <option value="甘口">甘口</option>
+                        <option value="極甘口">極甘口</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="taste-acidity">酸味</label>
+                    <select id="taste-acidity" class="select-input">
+                        <option value="">選択してください</option>
+                        <option value="低い">低い</option>
+                        <option value="中程度">中程度</option>
+                        <option value="高い">高い</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="tannin-group">
+                    <label for="taste-tannin">タンニン（赤ワインのみ）</label>
+                    <select id="taste-tannin" class="select-input">
+                        <option value="">選択してください</option>
+                        <option value="軽い">軽い</option>
+                        <option value="中程度">中程度</option>
+                        <option value="強い">強い</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="taste-body">ボディ</label>
+                    <select id="taste-body" class="select-input">
+                        <option value="">選択してください</option>
+                        <option value="ライト">ライト</option>
+                        <option value="ミディアム">ミディアム</option>
+                        <option value="フル">フル</option>
+                    </select>
+                </div>
+
+                <!-- 余韻 -->
+                <div class="form-group">
+                    <label for="finish">余韻</label>
+                    <select id="finish" class="select-input">
+                        <option value="">選択してください</option>
+                        <option value="短い">短い</option>
+                        <option value="中程度">中程度</option>
+                        <option value="長い">長い</option>
+                    </select>
+                </div>
+
+                <!-- 追加メモ -->
+                <div class="form-group">
+                    <label for="additional-notes">追加メモ（自由記述）</label>
+                    <textarea id="additional-notes" rows="3" placeholder="その他、気づいたことや印象を自由に書いてください"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary">保存</button>
+        </form>
+    </div>
+
+    <!-- 詳細表示画面 -->
+    <div id="detail-screen" class="screen">
+        <header>
+            <button id="detail-back-btn" class="icon-btn">← 戻る</button>
+            <h1>詳細</h1>
+            <div class="header-actions">
+                <button id="edit-detail-btn" class="icon-btn">✏️</button>
+                <button id="delete-btn" class="icon-btn">🗑️</button>
+            </div>
+        </header>
+
+        <div id="wine-detail" class="wine-detail"></div>
+    </div>
+
+    <!-- インポート用の隠しファイル入力 -->
+    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+    <script>
+        // IndexedDB管理クラス
+        class WineDB {
+            constructor() {
+                this.db = null;
+                this.dbName = 'WineDB';
+                this.version = 1;
+            }
+
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.version);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve();
+                    };
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('wines')) {
+                            const wineStore = db.createObjectStore('wines', { keyPath: 'id', autoIncrement: true });
+                            wineStore.createIndex('name', 'name', { unique: false });
+                            wineStore.createIndex('region', 'region', { unique: false });
+                            wineStore.createIndex('variety', 'variety', { unique: false });
+                            wineStore.createIndex('date', 'date', { unique: false });
+                        }
+                    };
+                });
+            }
+
+            async addWine(wine) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['wines'], 'readwrite');
+                    const store = transaction.objectStore('wines');
+                    const request = store.add({ ...wine, createdAt: new Date().toISOString() });
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async updateWine(id, wine) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['wines'], 'readwrite');
+                    const store = transaction.objectStore('wines');
+                    const request = store.put({ ...wine, id: id, updatedAt: new Date().toISOString() });
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async deleteWine(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['wines'], 'readwrite');
+                    const store = transaction.objectStore('wines');
+                    const request = store.delete(id);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async getWine(id) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['wines'], 'readonly');
+                    const store = transaction.objectStore('wines');
+                    const request = store.get(id);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async getAllWines() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['wines'], 'readonly');
+                    const store = transaction.objectStore('wines');
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        const wines = request.result;
+                        wines.sort((a, b) => {
+                            const dateA = new Date(a.date || a.createdAt);
+                            const dateB = new Date(b.date || b.createdAt);
+                            return dateB - dateA;
+                        });
+                        resolve(wines);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async searchWines(query) {
+                const allWines = await this.getAllWines();
+                const lowerQuery = query.toLowerCase();
+                return allWines.filter(wine => {
+                    return (
+                        wine.name?.toLowerCase().includes(lowerQuery) ||
+                        wine.producer?.toLowerCase().includes(lowerQuery) ||
+                        wine.region?.toLowerCase().includes(lowerQuery) ||
+                        wine.variety?.toLowerCase().includes(lowerQuery) ||
+                        wine.notes?.toLowerCase().includes(lowerQuery)
+                    );
+                });
+            }
+
+            async exportData() {
+                const wines = await this.getAllWines();
+                return JSON.stringify(wines, null, 2);
+            }
+
+            async importData(jsonData) {
+                const wines = JSON.parse(jsonData);
+                const transaction = this.db.transaction(['wines'], 'readwrite');
+                const store = transaction.objectStore('wines');
+                return new Promise((resolve, reject) => {
+                    transaction.oncomplete = () => resolve(wines.length);
+                    transaction.onerror = () => reject(transaction.error);
+                    wines.forEach(wine => {
+                        const { id, ...wineData } = wine;
+                        store.add(wineData);
+                    });
+                });
+            }
+        }
+
+        const wineDB = new WineDB();
+
+        // アプリケーション状態
+        const app = {
+            currentScreen: 'home',
+            currentWineId: null,
+            photoData: null
+        };
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            await wineDB.init();
+            setupEventListeners();
+            loadWineList();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('add-wine-btn').addEventListener('click', () => {
+                app.currentWineId = null;
+                app.photoData = null;
+                resetForm();
+                showScreen('edit');
+            });
+
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                searchWines(e.target.value);
+            });
+
+            document.getElementById('back-btn').addEventListener('click', () => {
+                showScreen('home');
+            });
+
+            document.getElementById('photo-btn').addEventListener('click', () => {
+                document.getElementById('photo-input').click();
+            });
+
+            document.getElementById('photo-input').addEventListener('change', handlePhotoSelect);
+            document.getElementById('wine-form').addEventListener('submit', handleFormSubmit);
+
+            const stars = document.querySelectorAll('.star');
+            stars.forEach(star => {
+                star.addEventListener('click', () => {
+                    const value = parseInt(star.dataset.value);
+                    document.getElementById('rating').value = value;
+                    updateStarDisplay(value);
+                });
+            });
+
+            document.getElementById('detail-back-btn').addEventListener('click', () => {
+                showScreen('home');
+            });
+
+            document.getElementById('edit-detail-btn').addEventListener('click', async () => {
+                await loadWineForEdit(app.currentWineId);
+                showScreen('edit');
+            });
+
+            document.getElementById('delete-btn').addEventListener('click', handleDelete);
+            document.getElementById('export-btn').addEventListener('click', handleExport);
+            document.getElementById('import-btn').addEventListener('click', () => {
+                document.getElementById('import-file-input').click();
+            });
+            document.getElementById('import-file-input').addEventListener('change', handleImport);
+        }
+
+        function showScreen(screenName) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            const screenMap = { 'home': 'home-screen', 'edit': 'edit-screen', 'detail': 'detail-screen' };
+            document.getElementById(screenMap[screenName]).classList.add('active');
+            app.currentScreen = screenName;
+            window.scrollTo(0, 0);
+        }
+
+        async function loadWineList() {
+            const wines = await wineDB.getAllWines();
+            displayWineList(wines);
+        }
+
+        function displayWineList(wines) {
+            const wineList = document.getElementById('wine-list');
+            if (wines.length === 0) {
+                wineList.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 4rem;">🍷</div>
+                        <p>まだワインが登録されていません</p>
+                        <p style="font-size: 0.875rem; margin-top: 0.5rem;">右下の + ボタンから追加してください</p>
+                    </div>
+                `;
+                return;
+            }
+
+            wineList.innerHTML = wines.map(wine => `
+                <div class="wine-card" data-id="${wine.id}">
+                    ${wine.photo ?
+                        `<img src="${wine.photo}" alt="${wine.name}" class="wine-card-photo">` :
+                        `<div class="wine-card-photo" style="display: flex; align-items: center; justify-content: center; font-size: 2rem;">🍷</div>`
+                    }
+                    <div class="wine-card-info">
+                        <div class="wine-card-name">${escapeHtml(wine.name)}</div>
+                        <div class="wine-card-meta">
+                            ${wine.region ? escapeHtml(wine.region) : ''}
+                            ${wine.vintage ? ` (${wine.vintage})` : ''}
+                        </div>
+                        <div class="wine-card-rating">${getStarDisplay(wine.rating || 0)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.wine-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const wineId = parseInt(card.dataset.id);
+                    showWineDetail(wineId);
+                });
+            });
+        }
+
+        async function searchWines(query) {
+            if (!query.trim()) {
+                await loadWineList();
+                return;
+            }
+            const wines = await wineDB.searchWines(query);
+            displayWineList(wines);
+        }
+
+        function handlePhotoSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                app.photoData = event.target.result;
+                const preview = document.getElementById('photo-preview');
+                preview.innerHTML = `<img src="${app.photoData}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const wineData = {
+                name: document.getElementById('wine-name').value,
+                producer: document.getElementById('producer').value,
+                region: document.getElementById('region').value,
+                variety: document.getElementById('variety').value,
+                vintage: document.getElementById('vintage').value ? parseInt(document.getElementById('vintage').value) : null,
+                date: document.getElementById('date').value,
+                rating: parseInt(document.getElementById('rating').value) || 0,
+                notes: document.getElementById('notes').value,
+                photo: app.photoData
+            };
+
+            try {
+                if (app.currentWineId) {
+                    await wineDB.updateWine(app.currentWineId, wineData);
+                } else {
+                    await wineDB.addWine(wineData);
+                }
+                await loadWineList();
+                showScreen('home');
+                resetForm();
+            } catch (error) {
+                alert('保存に失敗しました: ' + error.message);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('wine-form').reset();
+            document.getElementById('photo-preview').innerHTML = '<span class="photo-placeholder">📷 写真を追加</span>';
+            document.getElementById('rating').value = '0';
+            updateStarDisplay(0);
+            document.getElementById('edit-title').textContent = '新規記録';
+            app.photoData = null;
+        }
+
+        async function loadWineForEdit(wineId) {
+            const wine = await wineDB.getWine(wineId);
+            if (!wine) return;
+
+            app.currentWineId = wineId;
+            app.photoData = wine.photo;
+
+            document.getElementById('wine-name').value = wine.name || '';
+            document.getElementById('producer').value = wine.producer || '';
+            document.getElementById('region').value = wine.region || '';
+            document.getElementById('variety').value = wine.variety || '';
+            document.getElementById('vintage').value = wine.vintage || '';
+            document.getElementById('date').value = wine.date || '';
+            document.getElementById('rating').value = wine.rating || 0;
+            document.getElementById('notes').value = wine.notes || '';
+
+            updateStarDisplay(wine.rating || 0);
+
+            if (wine.photo) {
+                document.getElementById('photo-preview').innerHTML = `<img src="${wine.photo}" alt="Preview">`;
+            } else {
+                document.getElementById('photo-preview').innerHTML = '<span class="photo-placeholder">📷 写真を追加</span>';
+            }
+
+            document.getElementById('edit-title').textContent = 'ワイン編集';
+        }
+
+        async function showWineDetail(wineId) {
+            const wine = await wineDB.getWine(wineId);
+            if (!wine) return;
+
+            app.currentWineId = wineId;
+
+            const detailContainer = document.getElementById('wine-detail');
+            detailContainer.innerHTML = `
+                ${wine.photo ? `<img src="${wine.photo}" alt="${wine.name}" class="detail-photo">` : ''}
+
+                <div class="detail-section">
+                    <div class="detail-title">${escapeHtml(wine.name)}</div>
+
+                    ${wine.producer ? `
+                        <div class="detail-row">
+                            <div class="detail-label">生産者/ワイナリー</div>
+                            <div class="detail-value">${escapeHtml(wine.producer)}</div>
+                        </div>
+                    ` : ''}
+
+                    ${wine.region ? `
+                        <div class="detail-row">
+                            <div class="detail-label">産地</div>
+                            <div class="detail-value">${escapeHtml(wine.region)}</div>
+                        </div>
+                    ` : ''}
+
+                    ${wine.variety ? `
+                        <div class="detail-row">
+                            <div class="detail-label">品種</div>
+                            <div class="detail-value">${escapeHtml(wine.variety)}</div>
+                        </div>
+                    ` : ''}
+
+                    ${wine.vintage ? `
+                        <div class="detail-row">
+                            <div class="detail-label">ヴィンテージ</div>
+                            <div class="detail-value">${wine.vintage}年</div>
+                        </div>
+                    ` : ''}
+
+                    ${wine.date ? `
+                        <div class="detail-row">
+                            <div class="detail-label">購入日/飲んだ日</div>
+                            <div class="detail-value">${formatDate(wine.date)}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="detail-row">
+                        <div class="detail-label">評価</div>
+                        <div class="detail-rating">${getStarDisplay(wine.rating || 0)}</div>
+                    </div>
+
+                    ${wine.notes ? `
+                        <div class="detail-row">
+                            <div class="detail-label">テイスティングメモ</div>
+                            <div class="detail-value detail-notes">${escapeHtml(wine.notes)}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            showScreen('detail');
+        }
+
+        async function handleDelete() {
+            if (!confirm('このワインを削除しますか？')) return;
+            try {
+                await wineDB.deleteWine(app.currentWineId);
+                await loadWineList();
+                showScreen('home');
+            } catch (error) {
+                alert('削除に失敗しました: ' + error.message);
+            }
+        }
+
+        async function handleExport() {
+            try {
+                const jsonData = await wineDB.exportData();
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `wine-records-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('エクスポートに失敗しました: ' + error.message);
+            }
+        }
+
+        async function handleImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const count = await wineDB.importData(event.target.result);
+                    alert(`${count}件のワインをインポートしました`);
+                    await loadWineList();
+                    document.getElementById('import-file-input').value = '';
+                } catch (error) {
+                    alert('インポートに失敗しました: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateStarDisplay(rating) {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.textContent = '★';
+                    star.classList.add('active');
+                } else {
+                    star.textContent = '☆';
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        function getStarDisplay(rating) {
+            return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

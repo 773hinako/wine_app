@@ -13,10 +13,10 @@
 
     <title>ワイン記録</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="stylesheet" href="../src/css/styles.css">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
     <!-- ホーム画面 -->
@@ -24,6 +24,8 @@
         <header>
             <h1>🍷 ワイン記録</h1>
             <div class="header-actions">
+                <button id="stats-btn" class="icon-btn" title="統計">📊</button>
+                <button id="dark-mode-btn" class="icon-btn" title="ダークモード">🌙</button>
                 <button id="export-btn" class="icon-btn" title="エクスポート">📤</button>
                 <button id="import-btn" class="icon-btn" title="インポート">📥</button>
             </div>
@@ -33,9 +35,38 @@
             <input type="text" id="search-input" placeholder="🔍 ワイン名、産地、品種、メモで検索...">
         </div>
 
+        <div class="filter-sort-container">
+            <select id="filter-select" class="filter-select">
+                <option value="all">すべて</option>
+                <option value="favorite">⭐ お気に入り</option>
+                <option value="red">🍷 赤ワイン</option>
+                <option value="white">🥂 白ワイン</option>
+                <option value="rose">🌸 ロゼ</option>
+                <option value="sparkling">🍾 スパークリング</option>
+            </select>
+
+            <select id="sort-select" class="sort-select">
+                <option value="date-desc">📅 新しい順</option>
+                <option value="date-asc">📅 古い順</option>
+                <option value="rating-desc">⭐ 評価高い順</option>
+                <option value="rating-asc">⭐ 評価低い順</option>
+                <option value="name-asc">🔤 名前順（あ→ん）</option>
+                <option value="name-desc">🔤 名前順（ん→あ）</option>
+            </select>
+        </div>
+
         <div id="wine-list" class="wine-list"></div>
 
         <button id="add-wine-btn" class="fab">+</button>
+    </div>
+
+    <!-- 統計画面 -->
+    <div id="stats-screen" class="screen">
+        <header>
+            <button id="stats-back-btn" class="icon-btn">← 戻る</button>
+            <h1>📊 統計</h1>
+        </header>
+        <div id="stats-content" class="stats-content"></div>
     </div>
 
     <!-- 新規記録/編集画面 -->
@@ -235,7 +266,8 @@
     <!-- インポート用の隠しファイル入力 -->
     <input type="file" id="import-file-input" accept=".json" style="display: none;">
 
-    <script src="db.js"></script>
-    <script src="app.js"></script>
+    <script src="../src/js/db.js"></script>
+    <script src="../src/js/features.js"></script>
+    <script src="../src/js/app.js"></script>
 </body>
 </html>

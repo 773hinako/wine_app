@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/public/index.html"
   status = 200
 
 [build.environment]
@@ -19,12 +19,12 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[headers]]
-  for = "/service-worker.js"
+  for = "/src/workers/service-worker.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
-  for = "/manifest.json"
+  for = "/public/manifest.json"
   [headers.values]
     Content-Type = "application/manifest+json"
     Cache-Control = "public, max-age=3600"

@@ -3,7 +3,10 @@ const app = {
     currentScreen: 'home',
     currentWineId: null,
     photoData: null,
-    deferredPrompt: null
+    photoThumbnail: null,
+    deferredPrompt: null,
+    sortBy: 'date-desc',  // デフォルトソート
+    filterType: 'all'      // デフォルトフィルター
 };
 
 // 初期化
@@ -11,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Service Worker登録
     if ('serviceWorker' in navigator) {
         try {
-            await navigator.serviceWorker.register('/service-worker.js');
+            await navigator.serviceWorker.register('/src/workers/service-worker.js');
             console.log('Service Worker registered');
         } catch (error) {
             console.error('Service Worker registration failed:', error);
@@ -29,6 +32,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // PWAインストールプロンプト処理
     setupInstallPrompt();
+
+    // ダークモード初期化
+    initDarkMode();
+
+    // スワイプジェスチャー初期化
+    initSwipeGestures();
+
+    // チュートリアル表示（初回のみ）
+    setTimeout(() => showTutorial(), 1000);
 });
 
 // イベントリスナー設定
@@ -91,6 +103,31 @@ function setupEventListeners() {
     document.querySelectorAll('input[name="wine-type"]').forEach(radio => {
         radio.addEventListener('change', toggleTanninField);
     });
+
+    // ソート・フィルター
+    document.getElementById('sort-select').addEventListener('change', (e) => {
+        app.sortBy = e.target.value;
+        loadWineList();
+    });
+
+    document.getElementById('filter-select').addEventListener('change', (e) => {
+        app.filterType = e.target.value;
+        loadWineList();
+    });
+
+    // 統計画面
+    document.getElementById('stats-btn').addEventListener('click', () => {
+        showStatsScreen();
+    });
+
+    document.getElementById('stats-back-btn').addEventListener('click', () => {
+        showScreen('home');
+    });
+
+    // ダークモード
+    document.getElementById('dark-mode-btn').addEventListener('click', () => {
+        toggleDarkMode();
+    });
 }
 
 // タンニンフィールドの表示/非表示
@@ -113,7 +150,8 @@ function showScreen(screenName) {
     const screenMap = {
         'home': 'home-screen',
         'edit': 'edit-screen',
-        'detail': 'detail-screen'
+        'detail': 'detail-screen',
+        'stats': 'stats-screen'
     };
 
     document.getElementById(screenMap[screenName]).classList.add('active');
@@ -123,10 +161,22 @@ function showScreen(screenName) {
     window.scrollTo(0, 0);
 }
 
-// ワインリスト読み込み
+// ワインリスト読み込み（ソート・フィルター対応）
 async function loadWineList() {
-    const wines = await wineDB.getAllWines();
-    displayWineList(wines);
+    try {
+        let wines = await wineDB.getAllWines();
+
+        // フィルター適用
+        wines = filterWines(wines, app.filterType);
+
+        // ソート適用
+        wines = sortWines(wines, app.sortBy);
+
+        displayWineList(wines);
+    } catch (error) {
+        showToast('データの読み込みに失敗しました', 'error');
+        console.error('Load error:', error);
+    }
 }
 
 // ワインリスト表示
@@ -146,8 +196,11 @@ function displayWineList(wines) {
 
     wineList.innerHTML = wines.map(wine => `
         <div class="wine-card" data-id="${wine.id}">
-            ${wine.photo ?
-                `<img src="${wine.photo}" alt="${wine.name}" class="wine-card-photo">` :
+            <button class="favorite-btn" onclick="event.stopPropagation(); toggleFavorite(${wine.id})" aria-label="${wine.favorite ? 'お気に入りから削除' : 'お気に入りに追加'}">
+                ${wine.favorite ? '⭐' : '☆'}
+            </button>
+            ${(wine.thumbnail || wine.photo) ?
+                `<img src="${wine.thumbnail || wine.photo}" alt="${wine.name}" class="wine-card-photo">` :
                 `<div class="wine-card-photo" style="display: flex; align-items: center; justify-content: center; font-size: 2rem;">🍷</div>`
             }
             <div class="wine-card-info">
@@ -181,63 +234,168 @@ async function searchWines(query) {
     displayWineList(wines);
 }
 
-// 写真選択処理
-function handlePhotoSelect(e) {
+// 写真選択処理（画像圧縮付き）
+async function handlePhotoSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        app.photoData = event.target.result;
+    // ファイルサイズチェック（10MB制限）
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('画像ファイルは10MB以下にしてください', 'error');
+        return;
+    }
+
+    // 画像タイプチェック
+    if (!file.type.startsWith('image/')) {
+        showToast('画像ファイルを選択してください', 'error');
+        return;
+    }
+
+    showLoading('画像を処理中...');
+
+    try {
+        // 画像を圧縮（最大1200px、品質0.85）
+        const compressed = await compressImage(file, 1200, 0.85);
+        app.photoData = compressed;
+
+        // サムネイル生成（リスト表示用、400px）
+        const thumbnail = await compressImage(file, 400, 0.8);
+        app.photoThumbnail = thumbnail;
+
         const preview = document.getElementById('photo-preview');
         preview.innerHTML = `<img src="${app.photoData}" alt="Preview">`;
-    };
-    reader.readAsDataURL(file);
+
+        hideLoading();
+        showToast('画像を追加しました', 'success');
+    } catch (error) {
+        hideLoading();
+        showToast('画像の処理に失敗しました', 'error');
+        console.error('Image processing error:', error);
+    }
+}
+
+// 画像圧縮関数
+function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // 縦横比を維持しながらリサイズ
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                // Canvasで圧縮
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                // 高品質な画像縮小
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // JPEGに変換して圧縮
+                canvas.toBlob(
+                    (blob) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }
 
 // フォーム送信
 async function handleFormSubmit(e) {
     e.preventDefault();
 
-    // 香りの収集
-    const aromas = Array.from(document.querySelectorAll('input[name="aroma"]:checked'))
-        .map(cb => cb.value);
+    // バリデーション
+    const wineName = document.getElementById('wine-name').value.trim();
+    if (!wineName) {
+        showToast('ワイン名を入力してください', 'error');
+        document.getElementById('wine-name').focus();
+        return;
+    }
 
-    const wineData = {
-        name: document.getElementById('wine-name').value,
-        producer: document.getElementById('producer').value,
-        region: document.getElementById('region').value,
-        variety: document.getElementById('variety').value,
-        vintage: document.getElementById('vintage').value ? parseInt(document.getElementById('vintage').value) : null,
-        date: document.getElementById('date').value,
-        rating: parseInt(document.getElementById('rating').value) || 0,
-        photo: app.photoData,
-        // テイスティングメモ構造化
-        tasting: {
-            wineType: document.querySelector('input[name="wine-type"]:checked').value,
-            appearanceColor: document.getElementById('appearance-color').value,
-            aromas: aromas,
-            sweetness: document.getElementById('taste-sweetness').value,
-            acidity: document.getElementById('taste-acidity').value,
-            tannin: document.getElementById('taste-tannin').value,
-            body: document.getElementById('taste-body').value,
-            finish: document.getElementById('finish').value,
-            additionalNotes: document.getElementById('additional-notes').value
+    // ヴィンテージのバリデーション
+    const vintageValue = document.getElementById('vintage').value;
+    if (vintageValue) {
+        const vintage = parseInt(vintageValue);
+        const currentYear = new Date().getFullYear();
+        if (vintage < 1900 || vintage > currentYear + 5) {
+            showToast(`ヴィンテージは1900年から${currentYear + 5}年の間で入力してください`, 'error');
+            document.getElementById('vintage').focus();
+            return;
         }
-    };
+    }
+
+    showLoading('保存中...');
 
     try {
+        // 香りの収集
+        const aromas = Array.from(document.querySelectorAll('input[name="aroma"]:checked'))
+            .map(cb => cb.value);
+
+        const wineData = {
+            name: wineName,
+            producer: document.getElementById('producer').value.trim(),
+            region: document.getElementById('region').value.trim(),
+            variety: document.getElementById('variety').value.trim(),
+            vintage: vintageValue ? parseInt(vintageValue) : null,
+            date: document.getElementById('date').value,
+            rating: parseInt(document.getElementById('rating').value) || 0,
+            photo: app.photoData,
+            thumbnail: app.photoThumbnail || app.photoData,  // サムネイルまたはオリジナル
+            favorite: false,  // お気に入りフラグ（初期値）
+            // テイスティングメモ構造化
+            tasting: {
+                wineType: document.querySelector('input[name="wine-type"]:checked').value,
+                appearanceColor: document.getElementById('appearance-color').value,
+                aromas: aromas,
+                sweetness: document.getElementById('taste-sweetness').value,
+                acidity: document.getElementById('taste-acidity').value,
+                tannin: document.getElementById('taste-tannin').value,
+                body: document.getElementById('taste-body').value,
+                finish: document.getElementById('finish').value,
+                additionalNotes: document.getElementById('additional-notes').value.trim()
+            }
+        };
+
         if (app.currentWineId) {
+            // 既存のお気に入り状態を保持
+            const existingWine = await wineDB.getWine(app.currentWineId);
+            wineData.favorite = existingWine.favorite || false;
             await wineDB.updateWine(app.currentWineId, wineData);
+            showToast('ワインを更新しました', 'success');
         } else {
             await wineDB.addWine(wineData);
+            showToast('ワインを追加しました', 'success');
         }
 
+        hideLoading();
         await loadWineList();
         showScreen('home');
         resetForm();
     } catch (error) {
-        alert('保存に失敗しました: ' + error.message);
+        hideLoading();
+        showToast('保存に失敗しました: ' + error.message, 'error');
+        console.error('Save error:', error);
     }
 }
 
@@ -263,6 +421,7 @@ async function loadWineForEdit(wineId) {
 
     app.currentWineId = wineId;
     app.photoData = wine.photo;
+    app.photoThumbnail = wine.thumbnail || wine.photo;
 
     document.getElementById('wine-name').value = wine.name || '';
     document.getElementById('producer').value = wine.producer || '';
@@ -711,3 +870,265 @@ function showIOSInstallBanner() {
         hideInstallBanner();
     });
 }
+
+
+// ========================================
+// トースト通知システム
+// ========================================
+
+function showToast(message, type = "info") {
+    // 既存のトーストを削除
+    const existingToast = document.getElementById("toast-container");
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const colors = {
+        success: "#4CAF50",
+        error: "#f44336",
+        info: "#2196F3",
+        warning: "#FF9800"
+    };
+
+    const icons = {
+        success: "✓",
+        error: "✕",
+        info: "ℹ",
+        warning: "⚠"
+    };
+
+    const toast = document.createElement("div");
+    toast.id = "toast-container";
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        background: ${colors[type]};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 500;
+        max-width: 90%;
+        animation: slideDown 0.3s ease forwards;
+    `;
+
+    toast.innerHTML = `
+        <span style="font-size: 1.25rem;">${icons[type]}</span>
+        <span>${escapeHtml(message)}</span>
+    `;
+
+    // アニメーション定義
+    if (!document.getElementById("toast-styles")) {
+        const style = document.createElement("style");
+        style.id = "toast-styles";
+        style.textContent = `
+            @keyframes slideDown {
+                to {
+                    transform: translateX(-50%) translateY(0);
+                }
+            }
+            @keyframes slideUp {
+                from {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(-50%) translateY(-100px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(toast);
+
+    // 3秒後に自動削除
+    setTimeout(() => {
+        toast.style.animation = "slideUp 0.3s ease forwards";
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ========================================
+// ローディングインジケーター
+// ========================================
+
+function showLoading(message = "読み込み中...") {
+    // 既存のローディングを削除
+    hideLoading();
+
+    const loading = document.createElement("div");
+    loading.id = "loading-overlay";
+    loading.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        animation: fadeIn 0.2s ease;
+    `;
+
+    loading.innerHTML = `
+        <div style="
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        ">
+            <div class="spinner"></div>
+            <div style="color: #333; font-weight: 500;">${escapeHtml(message)}</div>
+        </div>
+    `;
+
+    // スピナーのスタイル定義
+    if (!document.getElementById("loading-styles")) {
+        const style = document.createElement("style");
+        style.id = "loading-styles";
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #8B4789;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(loading);
+}
+
+function hideLoading() {
+    const loading = document.getElementById("loading-overlay");
+    if (loading) {
+        loading.style.animation = "fadeOut 0.2s ease";
+        setTimeout(() => loading.remove(), 200);
+    }
+}
+
+
+// ========================================
+// 統計画面表示
+// ========================================
+
+async function showStatsScreen() {
+    showLoading('統計を計算中...');
+    try {
+        const wines = await wineDB.getAllWines();
+        const stats = calculateStatistics(wines);
+
+        const statsContent = document.getElementById('stats-content');
+        const typeNames = { red: '赤ワイン', white: '白ワイン', rose: 'ロゼ', sparkling: 'スパークリング' };
+
+        statsContent.innerHTML = `
+            <div class="stat-card">
+                <h3>📊 サマリー</h3>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.total}</div>
+                        <div class="stat-label">総ワイン数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">⭐${stats.avgRating}</div>
+                        <div class="stat-label">平均評価</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.favoriteCount}</div>
+                        <div class="stat-label">お気に入り</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <h3>⭐ 評価分布</h3>
+                ${Object.entries(stats.ratingDistribution).reverse().map(([rating, count]) => {
+                    const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                    return `<div class="stat-bar">
+                        <div class="stat-bar-label">${'★'.repeat(parseInt(rating))}</div>
+                        <div class="stat-bar-visual"><div class="stat-bar-fill" style="width: ${percentage}%"></div></div>
+                        <div class="stat-bar-value">${count}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+
+            ${Object.keys(stats.typeDistribution).length > 0 ? `
+                <div class="stat-card">
+                    <h3>🍷 ワインタイプ</h3>
+                    ${Object.entries(stats.typeDistribution).map(([type, count]) => {
+                        const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                        return `<div class="stat-bar">
+                            <div class="stat-bar-label">${typeNames[type] || type}</div>
+                            <div class="stat-bar-visual"><div class="stat-bar-fill" style="width: ${percentage}%"></div></div>
+                            <div class="stat-bar-value">${count}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            ` : ''}
+
+            ${Object.keys(stats.regionDistribution).length > 0 ? `
+                <div class="stat-card">
+                    <h3>🌍 産地トップ5</h3>
+                    ${Object.entries(stats.regionDistribution).map(([region, count]) => {
+                        const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                        return `<div class="stat-bar">
+                            <div class="stat-bar-label">${escapeHtml(region)}</div>
+                            <div class="stat-bar-visual"><div class="stat-bar-fill" style="width: ${percentage}%"></div></div>
+                            <div class="stat-bar-value">${count}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            ` : ''}
+
+            ${Object.keys(stats.varietyDistribution).length > 0 ? `
+                <div class="stat-card">
+                    <h3>🍇 品種トップ5</h3>
+                    ${Object.entries(stats.varietyDistribution).map(([variety, count]) => {
+                        const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                        return `<div class="stat-bar">
+                            <div class="stat-bar-label">${escapeHtml(variety)}</div>
+                            <div class="stat-bar-visual"><div class="stat-bar-fill" style="width: ${percentage}%"></div></div>
+                            <div class="stat-bar-value">${count}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            ` : ''}
+        `;
+
+        hideLoading();
+        showScreen('stats');
+    } catch (error) {
+        hideLoading();
+        showToast('統計の表示に失敗しました', 'error');
+        console.error('Stats error:', error);
+    }
+}
+

@@ -4,47 +4,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Multi-platform wine tasting record app available as:
-1. **PWA** (Progressive Web App) - Browser-based with offline support
-2. **Standalone** - Single HTML file, works without server
-3. **iOS Native** - Capacitor-based iOS app for App Store
+**PWA-focused wine tasting record app** with offline support.
+
+This project has been restructured to focus exclusively on **Progressive Web App (PWA)** development. Previous iOS and Standalone versions have been archived for reference.
 
 Core technology: Vanilla JavaScript + IndexedDB for complete offline functionality.
 
 ## Project Structure
 
+```
+wine/
+├── src/                    # Source code
+│   ├── js/                # JavaScript files
+│   │   ├── app.js        # Main application logic
+│   │   └── db.js         # IndexedDB wrapper
+│   ├── css/              # Stylesheets
+│   │   └── styles.css    # Main stylesheet
+│   └── workers/          # Service Worker
+│       └── service-worker.js
+│
+├── public/               # Static files (deployed as-is)
+│   ├── index.html       # Main HTML file
+│   ├── manifest.json    # PWA manifest
+│   └── icons/           # PWA icons
+│       ├── icon-192.png
+│       └── icon-512.png
+│
+├── docs/                 # Documentation
+├── scripts/              # Development scripts
+├── assets/               # Source assets
+├── archive/              # Archived versions (iOS, Standalone)
+│
+├── package.json
+├── netlify.toml         # Deployment config
+└── README.md
+```
+
 See [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) for detailed directory layout.
-
-### Key Directories
-
-- **Root**: PWA execution files (`index.html`, `app.js`, etc.)
-- **pwa-src/**: PWA source code (backup/reference)
-- **docs/**: All documentation files
-- **scripts/**: Server startup scripts and icon generators
-- **assets/**: Static assets (icons, images)
-- **ios/**: iOS native app (Xcode project)
-- **www/**: Capacitor web files (auto-generated)
-
-## Available Versions
-
-### 1. PWA Version (Root directory)
-- Full-featured web app with Service Worker
-- Requires local server (HTTPS or localhost)
-- Files duplicated in root for execution
-
-### 2. Standalone Version (`wine-app-standalone.html`)
-- Single HTML file with embedded CSS/JS
-- No server required, works via `file://` protocol
-- Same features as PWA but no Service Worker
-
-### 3. iOS App (`ios/` directory)
-- Capacitor-based native iOS app
-- Source: `www/index.html` (copy of standalone version)
-- Requires Mac + Xcode for building
 
 ## Common Commands
 
-### Development Server (PWA version)
+### Development Server
 
 ```bash
 # Quick start with provided scripts
@@ -55,31 +55,11 @@ See [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) for detailed directory layout.
 python -m http.server 8000
 ```
 
-### iOS Development (requires Mac)
-
-```bash
-# Install dependencies
-npm install
-cd ios/App && pod install && cd ../..
-
-# Sync web files to iOS
-npm run sync:ios
-
-# Open in Xcode
-npm run open:ios
-
-# Generate iOS icons
-python scripts/generate-ios-icons.py
-```
-
 ### Icon Generation
 
 ```bash
 # PWA icons (192x192, 512x512)
 python scripts/generate-icons.py
-
-# iOS app icons (all sizes)
-python scripts/generate-ios-icons.py
 
 # Browser-based icon generation
 # Open scripts/create-icons.html in browser
@@ -94,12 +74,12 @@ The app uses a single-page architecture with three screens managed by JavaScript
 - **Edit Screen** (`#edit-screen`): Add/edit wine form with camera integration
 - **Detail Screen** (`#detail-screen`): View full wine details
 
-Screen transitions are handled by `showScreen()` function in [app.js](app.js).
+Screen transitions are handled by `showScreen()` function in [src/js/app.js](src/js/app.js).
 
 ### Data Flow
 
-1. User interactions trigger events in [app.js](app.js)
-2. App logic calls IndexedDB operations through [db.js](db.js) WineDB class
+1. User interactions trigger events in [src/js/app.js](src/js/app.js)
+2. App logic calls IndexedDB operations through [src/js/db.js](src/js/db.js) WineDB class
 3. Data is stored/retrieved from IndexedDB
 4. UI is updated with new data
 
@@ -145,7 +125,7 @@ This ensures users see the latest version while maintaining offline functionalit
 
 ## Key Functions
 
-### app.js
+### src/js/app.js
 - `showScreen(screenName)` - Screen navigation
 - `loadWineList()` - Load and display all wines
 - `searchWines(query)` - Search functionality
@@ -153,7 +133,7 @@ This ensures users see the latest version while maintaining offline functionalit
 - `showWineDetail(wineId)` - Display wine details
 - `handleExport()` / `handleImport()` - Data export/import
 
-### db.js (WineDB class)
+### src/js/db.js (WineDB class)
 - `init()` - Initialize database
 - `addWine(wine)` - Create new wine record
 - `updateWine(id, wine)` - Update existing record
@@ -164,13 +144,39 @@ This ensures users see the latest version while maintaining offline functionalit
 - `exportData()` - Export all data as JSON
 - `importData(jsonData)` - Import data from JSON
 
+## File Paths Reference
+
+### HTML
+- Main HTML: [public/index.html](public/index.html)
+- References:
+  - CSS: `../src/css/styles.css`
+  - JS: `../src/js/app.js`, `../src/js/db.js`
+  - Icons: `icons/icon-*.png`
+  - Manifest: `manifest.json`
+
+### Service Worker
+- Location: [src/workers/service-worker.js](src/workers/service-worker.js)
+- Registration path: `/src/workers/service-worker.js`
+- Cached URLs:
+  - `/public/index.html`
+  - `/src/css/styles.css`
+  - `/src/js/app.js`
+  - `/src/js/db.js`
+  - `/public/manifest.json`
+
+### Manifest
+- Location: [public/manifest.json](public/manifest.json)
+- Icon paths: `icons/icon-192.png`, `icons/icon-512.png`
+
 ## Testing the PWA
 
-1. Open Chrome DevTools
-2. Go to Application tab
-3. Check "Service Workers" - should show registered worker
-4. Check "Manifest" - should show app info and icons
-5. Test offline: Check "Offline" in Network tab, refresh page
+1. Start local server (port 8000 recommended)
+2. Open `http://localhost:8000/public/` in browser
+3. Open Chrome DevTools
+4. Go to Application tab
+5. Check "Service Workers" - should show registered worker
+6. Check "Manifest" - should show app info and icons
+7. Test offline: Check "Offline" in Network tab, refresh page
 
 ## Installing as PWA
 
@@ -182,67 +188,48 @@ This ensures users see the latest version while maintaining offline functionalit
 - Chrome: Menu → "Add to Home screen"
 - Safari: Share → "Add to Home Screen"
 
-## Multi-Platform Architecture
+## Deployment (Netlify)
 
-### Code Sharing Strategy
-- **PWA version**: Modular files (`app.js`, `db.js`, `styles.css`) loaded separately
-- **Standalone version**: All code embedded in single HTML file for portability
-- **iOS app**: Uses standalone version in `www/` directory, wrapped by Capacitor
+The app is configured for Netlify deployment with [netlify.toml](netlify.toml):
+- Publishes from root directory
+- Redirects all routes to `/public/index.html` (SPA routing)
+- Proper cache headers for Service Worker and assets
 
-### Version Synchronization
-When updating the app:
-1. Modify PWA source files in `pwa-src/` directory
-2. Copy updated files to root: `cp pwa-src/* .`
-3. Rebuild standalone version by embedding updated code into `wine-app-standalone.html`
-4. Copy standalone version to `www/index.html`
-5. Run `npm run sync:ios` to update iOS app
+Deploy with:
+```bash
+# Push to connected git repository
+# Or use Netlify CLI
+netlify deploy --prod
+```
 
-### Platform-Specific Features
-- **PWA**: Service Worker for offline caching, install prompts
-- **Standalone**: No Service Worker (works on `file://` protocol)
-- **iOS**: Native camera permissions, App Store compliance
+## Archived Versions
 
-## iOS App Store Deployment
+Previous multi-platform versions are archived in [archive/](archive/):
+- **archive/ios/** - iOS native app (Capacitor)
+- **archive/standalone/** - Single-file HTML version
+- **archive/www/** - Capacitor web files
 
-### Bundle ID Configuration
-- Current: `com.winerecord.app` (in `capacitor.config.json`)
-- Must be unique for App Store submission
-- Change before publishing: `com.yourname.winerecord`
-
-### Required for App Store
-1. **Apple Developer Account**: $99/year
-2. **Privacy Policy URL**: Host `PRIVACY-POLICY.md` on web (required for review)
-3. **Screenshots**: Generate from Xcode simulator (6.7" and 6.5" displays)
-4. **App Icons**: Auto-generated by `generate-ios-icons.py` (15 sizes + App Store 1024x1024)
-
-### Permissions (already configured in `ios/App/App/Info.plist`)
-- `NSCameraUsageDescription`: Camera access for wine label photos
-- `NSPhotoLibraryUsageDescription`: Photo library access for selecting images
-- `NSPhotoLibraryAddUsageDescription`: Saving photos to library
-
-See [APP-STORE-GUIDE.md](APP-STORE-GUIDE.md) for complete deployment steps.
+These are kept for reference but are no longer actively maintained.
 
 ## Common Issues
 
-### Service Worker Not Updating (PWA only)
+### Service Worker Not Updating
 - Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
 - Or: DevTools → Application → Service Workers → "Unregister"
 
 ### Camera Not Working
-- **PWA/Web**: Requires HTTPS or localhost
-- **Standalone**: Some browsers restrict camera on `file://` protocol
-- **iOS**: Ensure permissions granted in Info.plist (already configured)
+- Requires HTTPS or localhost
+- Check browser permissions
 
-### Standalone vs PWA Decision
-- Use **PWA** when: Need install prompts, Service Worker caching, web distribution
-- Use **Standalone** when: Need offline HTML file, no server available, email distribution
-- Use **iOS** when: Publishing to App Store, need native integration
+### Path Issues After Restructure
+All file paths have been updated to the new structure:
+- HTML uses relative paths (`../src/...`)
+- Service Worker uses absolute paths (`/src/...`, `/public/...`)
+- Manifest uses relative paths from public/ directory
 
 ## Key Documentation Files
 
 - [README.md](README.md) - User-facing documentation (Japanese)
-- [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) - Detailed project structure and file organization
-- [docs/STANDALONE-GUIDE.md](docs/STANDALONE-GUIDE.md) - Standalone version installation guide
-- [docs/APP-STORE-GUIDE.md](docs/APP-STORE-GUIDE.md) - Complete iOS App Store publishing guide
+- [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) - Detailed project structure
 - [docs/INSTALL.md](docs/INSTALL.md) - PWA installation instructions
-- [docs/PRIVACY-POLICY.md](docs/PRIVACY-POLICY.md) - Privacy policy (customize before App Store submission)
+- [DEPLOY.md](DEPLOY.md) - Deployment guide

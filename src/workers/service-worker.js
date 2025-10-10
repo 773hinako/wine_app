@@ -1,11 +1,11 @@
 const CACHE_NAME = 'wine-app-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/db.js',
-  '/manifest.json'
+  '/public/index.html',
+  '/src/css/styles.css',
+  '/src/js/app.js',
+  '/src/js/db.js',
+  '/public/manifest.json'
 ];
 
 // インストール時のキャッシュ

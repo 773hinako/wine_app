@@ -1,0 +1,17 @@
+{
+	"appId": "com.winerecord.app",
+	"appName": "Wine Record",
+	"webDir": "www",
+	"ios": {
+		"contentInset": "always",
+		"allowsLinkPreview": false
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"backgroundColor": "#FFB6D9",
+			"showSpinner": false
+		}
+	},
+	"packageClassList": []
+}
