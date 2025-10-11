@@ -285,53 +285,103 @@ function initSwipeGestures() {
     let startX = 0;
     let startY = 0;
     let currentCard = null;
+    let isHorizontalSwipe = null; // null: 未判定, true: 横スワイプ, false: 縦スクロール
+    const SWIPE_THRESHOLD = 15; // スワイプ判定の閾値
+    const MAX_SWIPE_DISTANCE = 150; // 最大スワイプ距離（カードの動きを制限）
+
+    const resetSwipe = () => {
+        if (currentCard) {
+            currentCard.style.transition = 'transform 0.3s ease';
+            currentCard.style.transform = '';
+        }
+        currentCard = null;
+        isHorizontalSwipe = null;
+        startX = 0;
+        startY = 0;
+    };
 
     document.addEventListener('touchstart', (e) => {
         const card = e.target.closest('.wine-card');
         if (!card) return;
 
+        // お気に入りボタンをタップした場合はスワイプを無効化
+        if (e.target.closest('.favorite-btn')) return;
+
         currentCard = card;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
+        isHorizontalSwipe = null;
+
+        // トランジションを無効化
+        currentCard.style.transition = 'none';
     });
 
     document.addEventListener('touchmove', (e) => {
         if (!currentCard) return;
 
         const deltaX = e.touches[0].clientX - startX;
-        const deltaY = Math.abs(e.touches[0].clientY - startY);
+        const deltaY = e.touches[0].clientY - startY;
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
 
-        // 縦スクロールの場合はスワイプを無効化
-        if (deltaY > 10) {
-            currentCard = null;
+        // スワイプ方向がまだ決定していない場合、方向を判定
+        if (isHorizontalSwipe === null) {
+            if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
+                // 横方向の動きが縦方向より大きければ横スワイプ
+                isHorizontalSwipe = absDeltaX > absDeltaY;
+            } else {
+                return; // まだ閾値に達していない
+            }
+        }
+
+        // 縦スクロールと判定された場合は何もしない
+        if (isHorizontalSwipe === false) {
             return;
         }
 
-        // 横スワイプ
-        if (Math.abs(deltaX) > 10) {
-            e.preventDefault();
-            currentCard.style.transform = `translateX(${deltaX}px)`;
-            currentCard.style.transition = 'none';
+        // 横スワイプの場合、カードを動かす
+        if (isHorizontalSwipe === true) {
+            e.preventDefault(); // スクロールを防止
+
+            // スワイプ距離を制限
+            let limitedDeltaX = deltaX;
+            if (Math.abs(limitedDeltaX) > MAX_SWIPE_DISTANCE) {
+                limitedDeltaX = limitedDeltaX > 0 ? MAX_SWIPE_DISTANCE : -MAX_SWIPE_DISTANCE;
+            }
+
+            currentCard.style.transform = `translateX(${limitedDeltaX}px)`;
         }
     });
 
     document.addEventListener('touchend', (e) => {
-        if (!currentCard) return;
+        if (!currentCard || isHorizontalSwipe !== true) {
+            resetSwipe();
+            return;
+        }
 
         const deltaX = e.changedTouches[0].clientX - startX;
         currentCard.style.transition = 'transform 0.3s ease';
 
-        // 右スワイプ（お気に入り）
-        if (deltaX > 100) {
+        // 右スワイプ（お気に入り）- 80pxに閾値を下げて操作しやすく
+        if (deltaX > 80) {
             const wineId = parseInt(currentCard.dataset.id);
             toggleFavorite(wineId);
         }
 
-        // 左スワイプ（削除確認は表示しない、危険なので）
-
         // 元に戻す
-        currentCard.style.transform = '';
+        setTimeout(() => {
+            if (currentCard) {
+                currentCard.style.transform = '';
+            }
+        }, 10);
+
         currentCard = null;
+        isHorizontalSwipe = null;
+    });
+
+    // タッチがキャンセルされた場合の処理
+    document.addEventListener('touchcancel', () => {
+        resetSwipe();
     });
 }
 

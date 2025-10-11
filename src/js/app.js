@@ -371,6 +371,10 @@ async function handleFormSubmit(e) {
                 wineType: document.querySelector('input[name="wine-type"]:checked').value,
                 appearanceColor: document.getElementById('appearance-color').value,
                 aromas: aromas,
+                firstAroma: document.getElementById('first-aroma').value.trim(),
+                secondAroma: document.getElementById('second-aroma').value.trim(),
+                thirdAroma: document.getElementById('third-aroma').value.trim(),
+                oakIntensity: document.getElementById('oak-intensity').value,
                 sweetness: document.getElementById('taste-sweetness').value,
                 acidity: document.getElementById('taste-acidity').value,
                 tannin: document.getElementById('taste-tannin').value,
@@ -410,10 +414,18 @@ function resetForm() {
     updateStarDisplay(0);
     document.getElementById('edit-title').textContent = '新規記録';
     app.photoData = null;
+    app.photoThumbnail = null;
 
     // テイスティングフィールドをリセット
     document.querySelectorAll('input[name="aroma"]').forEach(cb => cb.checked = false);
     document.querySelector('input[name="wine-type"][value="red"]').checked = true;
+
+    // ソムリエ向けフィールドもリセット
+    document.getElementById('first-aroma').value = '';
+    document.getElementById('second-aroma').value = '';
+    document.getElementById('third-aroma').value = '';
+    document.getElementById('oak-intensity').value = '';
+
     toggleTanninField();
 }
 
@@ -455,6 +467,14 @@ async function loadWineForEdit(wineId) {
         document.querySelectorAll('input[name="aroma"]').forEach(cb => {
             cb.checked = wine.tasting.aromas && wine.tasting.aromas.includes(cb.value);
         });
+
+        // アロマの段階
+        document.getElementById('first-aroma').value = wine.tasting.firstAroma || '';
+        document.getElementById('second-aroma').value = wine.tasting.secondAroma || '';
+        document.getElementById('third-aroma').value = wine.tasting.thirdAroma || '';
+
+        // 樽感
+        document.getElementById('oak-intensity').value = wine.tasting.oakIntensity || '';
 
         // 味わい
         document.getElementById('taste-sweetness').value = wine.tasting.sweetness || '';
@@ -556,6 +576,24 @@ async function showWineDetail(wineId) {
                     <div class="detail-row">
                         <div class="detail-label">香り</div>
                         <div class="detail-value">${wine.tasting.aromas.map(a => escapeHtml(a)).join(', ')}</div>
+                    </div>
+                ` : ''}
+
+                ${wine.tasting.firstAroma || wine.tasting.secondAroma || wine.tasting.thirdAroma ? `
+                    <div class="detail-row">
+                        <div class="detail-label">🎓 アロマの段階（ソムリエ分類）</div>
+                        <div class="detail-value">
+                            ${wine.tasting.firstAroma ? `<div><strong>第一アロマ:</strong> ${escapeHtml(wine.tasting.firstAroma)}</div>` : ''}
+                            ${wine.tasting.secondAroma ? `<div><strong>第二アロマ:</strong> ${escapeHtml(wine.tasting.secondAroma)}</div>` : ''}
+                            ${wine.tasting.thirdAroma ? `<div><strong>第三アロマ:</strong> ${escapeHtml(wine.tasting.thirdAroma)}</div>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${wine.tasting.oakIntensity ? `
+                    <div class="detail-row">
+                        <div class="detail-label">🪵 樽感</div>
+                        <div class="detail-value">${escapeHtml(wine.tasting.oakIntensity)}</div>
                     </div>
                 ` : ''}
 

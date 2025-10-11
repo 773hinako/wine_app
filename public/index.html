@@ -87,8 +87,9 @@
                 <div id="photo-preview" class="photo-preview">
                     <span class="photo-placeholder">📷 写真を追加</span>
                 </div>
-                <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
-                <button type="button" id="photo-btn" class="btn-secondary">写真を撮影/選択</button>
+                <input type="file" id="photo-input" accept="image/*" style="display: none;">
+                <button type="button" id="photo-btn" class="btn-secondary">📷 写真を撮影/選択</button>
+                <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">カメラで撮影、またはギャラリーから既存の写真を選択できます</p>
             </div>
 
             <div class="form-group">
@@ -188,6 +189,41 @@
                         <label class="checkbox-label"><input type="checkbox" name="aroma" value="土・きのこ"> 🍄 土・きのこ</label>
                         <label class="checkbox-label"><input type="checkbox" name="aroma" value="ミネラル"> 💎 ミネラル</label>
                     </div>
+                </div>
+
+                <!-- アロマの段階（ソムリエ向け） -->
+                <div class="form-group">
+                    <label>🎓 アロマの段階（ソムリエ分類）</label>
+                    <div style="background: #f5f5f5; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <strong>第一アロマ（一次香）</strong>
+                            <small style="display: block; color: #666;">ブドウ品種由来の香り</small>
+                            <input type="text" id="first-aroma" class="select-input" placeholder="例: カシス、青ピーマン、ライチ" style="margin-top: 0.25rem;">
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <strong>第二アロマ（二次香）</strong>
+                            <small style="display: block; color: #666;">発酵・醸造由来の香り</small>
+                            <input type="text" id="second-aroma" class="select-input" placeholder="例: バター、ヨーグルト、ナッツ" style="margin-top: 0.25rem;">
+                        </div>
+                        <div>
+                            <strong>第三アロマ（三次香・ブーケ）</strong>
+                            <small style="display: block; color: #666;">熟成由来の香り</small>
+                            <input type="text" id="third-aroma" class="select-input" placeholder="例: トリュフ、枯葉、革、タバコ" style="margin-top: 0.25rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 樽感の強さ -->
+                <div class="form-group">
+                    <label for="oak-intensity">🪵 樽感（オーク感）の強さ</label>
+                    <select id="oak-intensity" class="select-input">
+                        <option value="">選択してください</option>
+                        <option value="樽感なし">樽感なし（ステンレスタンク熟成）</option>
+                        <option value="弱い">弱い（新樽比率低・短期熟成）</option>
+                        <option value="中程度">中程度（バランス型）</option>
+                        <option value="強い">強い（新樽比率高・長期熟成）</option>
+                        <option value="非常に強い">非常に強い（100%新樽など）</option>
+                    </select>
                 </div>
 
                 <!-- 味わい -->

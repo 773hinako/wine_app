@@ -134,6 +134,10 @@ The app is split into focused modules:
     wineType: string,     // 'red', 'white', 'rose', 'sparkling'
     appearanceColor: string,
     aromas: string[],
+    firstAroma: string,   // Primary aroma (from grape variety)
+    secondAroma: string,  // Secondary aroma (from fermentation)
+    thirdAroma: string,   // Tertiary aroma/bouquet (from aging)
+    oakIntensity: string, // Oak/barrel influence intensity
     sweetness: string,
     acidity: string,
     tannin: string,       // For red wines
