@@ -1,0 +1,52 @@
+# GitHub Pages デプロイ手順
+
+## 1. パス修正が必要なファイル
+
+GitHub Pagesでは、サブディレクトリ（リポジトリ名）がパスに含まれるため、
+相対パスを調整する必要があります。
+
+### public/index.html
+```html
+<!-- 現在 -->
+<link rel="stylesheet" href="../src/css/styles.css">
+<script src="../src/js/db.js"></script>
+<script src="../src/js/features.js"></script>
+<script src="../src/js/app.js"></script>
+
+<!-- GitHub Pages用（リポジトリ名が wine-app の場合）-->
+<link rel="stylesheet" href="/wine-app/src/css/styles.css">
+<script src="/wine-app/src/js/db.js"></script>
+<script src="/wine-app/src/js/features.js"></script>
+<script src="/wine-app/src/js/app.js"></script>
+```
+
+### src/js/app.js
+```javascript
+// Service Worker登録パスも調整
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/wine-app/src/workers/service-worker.js')
+}
+```
+
+## 2. デプロイ手順
+
+```bash
+git checkout -b gh-pages
+# パスを修正後
+git add -A
+git commit -m "Configure for GitHub Pages"
+git push origin gh-pages
+```
+
+## 3. GitHub設定
+
+- リポジトリ → Settings → Pages
+- Source: "Deploy from a branch"
+- Branch: "gh-pages" / root
+- Save
+
+URLは https://<username>.github.io/<repository>/ になります
+
+## 注意点
+
+GitHub Pagesはパス調整が必要なため、Netlify/Vercelの方が簡単です。

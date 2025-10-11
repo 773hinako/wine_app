@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // チュートリアル表示（初回のみ）
     setTimeout(() => showTutorial(), 1000);
+
+    // 自動バックアップ開始
+    AutoBackup.start();
 });
 
 // イベントリスナー設定
