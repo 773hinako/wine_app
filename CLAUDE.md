@@ -15,32 +15,30 @@ Core technology: Vanilla JavaScript + IndexedDB for complete offline functionali
 ```
 wine/
 ├── src/                    # Source code
-│   ├── js/                # JavaScript files
-│   │   ├── app.js        # Main application logic
-│   │   └── db.js         # IndexedDB wrapper
+│   ├── js/                # JavaScript modules
+│   │   ├── app.js        # Main application logic & UI
+│   │   ├── db.js         # IndexedDB wrapper (WineDB class)
+│   │   ├── features.js   # Extended features (sort, filter, favorites, stats, dark mode)
+│   │   └── auto-backup.js # Auto-backup to LocalStorage
 │   ├── css/              # Stylesheets
-│   │   └── styles.css    # Main stylesheet
+│   │   └── styles.css    # Main stylesheet with dark mode support
 │   └── workers/          # Service Worker
 │       └── service-worker.js
 │
 ├── public/               # Static files (deployed as-is)
-│   ├── index.html       # Main HTML file
+│   ├── index.html       # Single-page app HTML
 │   ├── manifest.json    # PWA manifest
 │   └── icons/           # PWA icons
 │       ├── icon-192.png
 │       └── icon-512.png
 │
+├── archive/              # Archived versions (iOS, Standalone)
 ├── docs/                 # Documentation
 ├── scripts/              # Development scripts
-├── assets/               # Source assets
-├── archive/              # Archived versions (iOS, Standalone)
-│
-├── package.json
-├── netlify.toml         # Deployment config
-└── README.md
+├── netlify.toml         # Netlify deployment config
+├── GIT-GUIDE.md         # Git workflow documentation
+└── DATA-SAFETY.md       # Data persistence documentation
 ```
-
-See [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) for detailed directory layout.
 
 ## Common Commands
 
@@ -76,12 +74,41 @@ The app uses a single-page architecture with three screens managed by JavaScript
 
 Screen transitions are handled by `showScreen()` function in [src/js/app.js](src/js/app.js).
 
+### Module Architecture
+
+The app is split into focused modules:
+
+1. **[src/js/db.js](src/js/db.js)** - Data persistence layer
+   - `WineDB` class wraps IndexedDB operations
+   - Handles CRUD operations and search
+   - Export/import functionality
+
+2. **[src/js/features.js](src/js/features.js)** - Extended features
+   - Sort/filter utilities (`sortWines`, `filterWines`)
+   - Favorite toggle (`toggleFavorite`)
+   - Statistics calculation (`calculateStatistics`)
+   - Dark mode (`initDarkMode`, `toggleDarkMode`)
+   - Tutorial system (`showTutorial`)
+   - Swipe gestures (`initSwipeGestures`)
+
+3. **[src/js/auto-backup.js](src/js/auto-backup.js)** - Data safety
+   - Auto-backup to LocalStorage every 5 minutes
+   - Maintains 3 generations of backups
+   - Backup on page unload
+
+4. **[src/js/app.js](src/js/app.js)** - Application controller
+   - Screen navigation (`showScreen`)
+   - Event handling
+   - UI rendering and updates
+   - Coordinates other modules
+
 ### Data Flow
 
-1. User interactions trigger events in [src/js/app.js](src/js/app.js)
-2. App logic calls IndexedDB operations through [src/js/db.js](src/js/db.js) WineDB class
-3. Data is stored/retrieved from IndexedDB
-4. UI is updated with new data
+1. User interactions → Event handlers in [src/js/app.js](src/js/app.js)
+2. App logic → IndexedDB operations via [src/js/db.js](src/js/db.js) WineDB class
+3. Data stored in IndexedDB + auto-backup to LocalStorage
+4. UI updated with new data
+5. Service Worker caches app files for offline use
 
 ### IndexedDB Schema
 
@@ -100,19 +127,46 @@ Screen transitions are handled by `showScreen()` function in [src/js/app.js](src
   vintage: number,
   date: string,           // ISO date format
   rating: number,         // 0-5
-  notes: string,
-  photo: string,          // Base64 data URL
+  photo: string,          // Base64 data URL (compressed, max 1200px)
+  thumbnail: string,      // Base64 thumbnail (400px, for list view)
+  favorite: boolean,      // Favorite flag
+  tasting: {              // Structured tasting notes
+    wineType: string,     // 'red', 'white', 'rose', 'sparkling'
+    appearanceColor: string,
+    aromas: string[],
+    sweetness: string,
+    acidity: string,
+    tannin: string,       // For red wines
+    body: string,
+    finish: string,
+    additionalNotes: string
+  },
+  notes: string,          // Legacy notes field
   createdAt: string,      // ISO timestamp
   updatedAt: string       // ISO timestamp
 }
 ```
 
-### Photo Handling
+### Photo Handling & Optimization
 
-Photos are stored as Base64-encoded data URLs directly in IndexedDB. This approach:
-- Works completely offline
-- Requires no external file storage
-- May impact performance with many large photos
+Photos are automatically compressed and stored as Base64-encoded data URLs in IndexedDB:
+
+**Image Processing Pipeline**:
+1. User selects image → `handlePhotoSelect()` in [src/js/app.js](src/js/app.js)
+2. File size validation (max 10MB)
+3. Auto-compression via `compressImage()`:
+   - Full photo: max 1200px, quality 85%
+   - Thumbnail: 400px, quality 80% (for list view)
+4. Stored in `wine.photo` and `wine.thumbnail` fields
+
+**Benefits**:
+- Complete offline functionality
+- No external file storage needed
+- Automatic optimization reduces storage impact
+
+**Considerations**:
+- Large photo collections may consume significant browser storage
+- Use thumbnails in list views for performance
 
 ### Service Worker Strategy
 
@@ -123,50 +177,72 @@ Uses **Network First** with cache fallback:
 
 This ensures users see the latest version while maintaining offline functionality.
 
-## Key Functions
+## Key Features & Functions
 
-### src/js/app.js
-- `showScreen(screenName)` - Screen navigation
-- `loadWineList()` - Load and display all wines
-- `searchWines(query)` - Search functionality
-- `handleFormSubmit()` - Save wine data
-- `showWineDetail(wineId)` - Display wine details
-- `handleExport()` / `handleImport()` - Data export/import
+### Core Features (src/js/app.js)
+- **Screen Navigation**: `showScreen(screenName)` - 4 screens: home, edit, detail, stats
+- **Wine List**: `loadWineList()` - Loads, filters, sorts, and displays wines with thumbnails
+- **Search**: `searchWines(query)` - Real-time search across name, region, variety, notes
+- **Form Handling**: `handleFormSubmit()` - Validates and saves wine data
+- **Image Processing**: `compressImage(file, maxWidth, quality)` - Canvas-based compression
+- **Toast Notifications**: `showToast(message, type)` - User feedback (success/error/info)
+- **Loading States**: `showLoading(message)` / `hideLoading()` - Async operation feedback
 
-### src/js/db.js (WineDB class)
-- `init()` - Initialize database
+### Extended Features (src/js/features.js)
+- **Favorites**: `toggleFavorite(wineId)` - Star/unstar wines
+- **Sorting**: `sortWines(wines, sortBy)` - date, rating, name (asc/desc)
+- **Filtering**: `filterWines(wines, filterType)` - all, favorites, wine types
+- **Statistics**: `calculateStatistics(wines)` - Rating distribution, type breakdown, top regions/varieties
+- **Dark Mode**: `toggleDarkMode()` - Persisted to LocalStorage
+- **Tutorial**: `showTutorial()` - First-time user onboarding
+- **Swipe Gestures**: `initSwipeGestures()` - Touch interactions for favorites
+
+### Database Operations (src/js/db.js - WineDB class)
+- `init()` - Initialize IndexedDB with schema
 - `addWine(wine)` - Create new wine record
 - `updateWine(id, wine)` - Update existing record
 - `deleteWine(id)` - Delete record
 - `getWine(id)` - Retrieve single wine
-- `getAllWines()` - Retrieve all wines (sorted by date)
-- `searchWines(query)` - Search across multiple fields
+- `getAllWines()` - Retrieve all wines (sorted by date descending)
+- `searchWines(query)` - Full-text search across multiple fields
 - `exportData()` - Export all data as JSON
 - `importData(jsonData)` - Import data from JSON
 
+### Auto-Backup System (src/js/auto-backup.js)
+- `AutoBackup.start()` - Initialize auto-backup (5-minute interval)
+- `AutoBackup.createBackup()` - Save to LocalStorage
+- `AutoBackup.restore(backupIndex)` - Restore from backup
+- Maintains 3 generations of backups
+
 ## File Paths Reference
 
-### HTML
+### HTML Entry Point
 - Main HTML: [public/index.html](public/index.html)
-- References:
-  - CSS: `../src/css/styles.css`
-  - JS: `../src/js/app.js`, `../src/js/db.js`
-  - Icons: `icons/icon-*.png`
-  - Manifest: `manifest.json`
+- Script loading order (critical):
+  1. `../src/js/db.js` (database layer)
+  2. `../src/js/features.js` (extended features)
+  3. `../src/js/auto-backup.js` (backup system)
+  4. `../src/js/app.js` (application controller - must load last)
+- CSS: `../src/css/styles.css`
+- Icons: `icons/icon-192.png`, `icons/icon-512.png`
+- Manifest: `manifest.json`
 
 ### Service Worker
 - Location: [src/workers/service-worker.js](src/workers/service-worker.js)
-- Registration path: `/src/workers/service-worker.js`
-- Cached URLs:
+- Registration: `/src/workers/service-worker.js` (absolute path)
+- Cache strategy: Network-first with fallback
+- Cached resources:
   - `/public/index.html`
   - `/src/css/styles.css`
-  - `/src/js/app.js`
-  - `/src/js/db.js`
+  - `/src/js/*.js`
   - `/public/manifest.json`
 
-### Manifest
+### PWA Manifest
 - Location: [public/manifest.json](public/manifest.json)
-- Icon paths: `icons/icon-192.png`, `icons/icon-512.png`
+- App name: "ワイン記録"
+- Theme color: `#FFB6D9`
+- Display: `standalone`
+- Icons: 192x192, 512x512
 
 ## Testing the PWA
 
@@ -188,19 +264,47 @@ This ensures users see the latest version while maintaining offline functionalit
 - Chrome: Menu → "Add to Home screen"
 - Safari: Share → "Add to Home Screen"
 
-## Deployment (Netlify)
+## Deployment
 
-The app is configured for Netlify deployment with [netlify.toml](netlify.toml):
-- Publishes from root directory
-- Redirects all routes to `/public/index.html` (SPA routing)
-- Proper cache headers for Service Worker and assets
+### Netlify (Current Deployment)
 
-Deploy with:
+The app is configured for automatic deployment via [netlify.toml](netlify.toml):
+
+**Configuration**:
+- Publish directory: `.` (root)
+- Build command: None (static PWA)
+- SPA redirect: `/*` → `/public/index.html`
+
+**Cache Headers**:
+- Service Worker: `max-age=0, must-revalidate` (always fresh)
+- CSS/JS/images: `max-age=31536000, immutable` (1 year)
+- Manifest: `max-age=3600` (1 hour)
+
+**Deployment Flow**:
+1. Push to GitHub main branch
+2. Netlify auto-detects changes
+3. Builds and deploys (1-2 minutes)
+4. Live at configured domain
+
+**Manual Deploy**:
 ```bash
-# Push to connected git repository
-# Or use Netlify CLI
+# Using Git (auto-deploy)
+git add -A
+git commit -m "Description"
+git push origin main
+
+# Using Netlify CLI
 netlify deploy --prod
 ```
+
+### Data Persistence on Updates
+
+✅ **User data is safe**: Updates to app code do not affect user data
+- App code (HTML/CSS/JS) is cached by Service Worker
+- User data (IndexedDB) is separate from app code
+- Auto-backup to LocalStorage provides additional safety
+
+See [DATA-SAFETY.md](DATA-SAFETY.md) for details.
 
 ## Archived Versions
 
@@ -227,9 +331,63 @@ All file paths have been updated to the new structure:
 - Service Worker uses absolute paths (`/src/...`, `/public/...`)
 - Manifest uses relative paths from public/ directory
 
+## Important Development Notes
+
+### Adding New Features
+
+When adding new features that require persistent data:
+1. Update wine object structure in `WineDB` schema if needed
+2. Add migration logic for existing data
+3. Update auto-backup to include new fields
+4. Test export/import with new data structure
+
+### Modifying the Database Schema
+
+**IMPORTANT**: IndexedDB schema changes require careful migration:
+```javascript
+// In db.js, increment version number
+const DB_VERSION = 2; // Increment
+
+// Add migration in onupgradeneeded
+if (event.oldVersion < 2) {
+    // Migration code here
+}
+```
+
+### Service Worker Updates
+
+After modifying Service Worker:
+- Increment `CACHE_VERSION` constant
+- Test that old cache is properly cleared
+- Verify offline functionality still works
+
+### Script Loading Order
+
+**Critical**: Scripts must load in this exact order:
+1. `db.js` - Provides `wineDB` global
+2. `features.js` - Uses `wineDB`, provides utility functions
+3. `auto-backup.js` - Uses `wineDB`, provides `AutoBackup` global
+4. `app.js` - Uses all above modules
+
+Breaking this order will cause "undefined" errors.
+
+### CSS Custom Properties (Dark Mode)
+
+All colors use CSS variables defined in `:root` and overridden in `body.dark-mode`:
+```css
+:root {
+    --background-color: #FFFFFF;
+}
+body.dark-mode {
+    --background-color: #1a1a1a;
+}
+```
+Use variables for all new color styles to maintain dark mode compatibility.
+
 ## Key Documentation Files
 
 - [README.md](README.md) - User-facing documentation (Japanese)
-- [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) - Detailed project structure
-- [docs/INSTALL.md](docs/INSTALL.md) - PWA installation instructions
-- [DEPLOY.md](DEPLOY.md) - Deployment guide
+- [GIT-GUIDE.md](GIT-GUIDE.md) - Git workflow and commands
+- [DATA-SAFETY.md](DATA-SAFETY.md) - Data persistence and backup system
+- [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) - Detailed project structure (if exists)
+- [DEVELOPMENT-STATUS.md](DEVELOPMENT-STATUS.md) - Feature tracking and status
