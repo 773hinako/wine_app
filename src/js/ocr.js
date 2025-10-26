@@ -30,6 +30,49 @@ class WineOCR {
         }
     }
 
+    // 画像の前処理（サイズ最適化とコントラスト調整）
+    async preprocessImage(imageData) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 最大幅を1200pxに制限（スマホでの処理速度向上）
+                const maxWidth = 1200;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // 画像を描画
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // コントラスト調整（OCR精度向上）
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                const factor = 1.2; // コントラスト係数
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.min(255, data[i] * factor);     // R
+                    data[i + 1] = Math.min(255, data[i + 1] * factor); // G
+                    data[i + 2] = Math.min(255, data[i + 2] * factor); // B
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg', 0.9));
+            };
+            img.onerror = reject;
+            img.src = imageData;
+        });
+    }
+
     // 画像からテキストを認識
     async recognizeText(imageData) {
         try {
@@ -37,8 +80,11 @@ class WineOCR {
                 await this.initialize();
             }
 
+            console.log('画像前処理中...');
+            const processedImage = await this.preprocessImage(imageData);
+            
             console.log('OCR処理開始...');
-            const { data } = await this.worker.recognize(imageData);
+            const { data } = await this.worker.recognize(processedImage);
             console.log('OCR処理完了');
             console.log('認識されたテキスト:', data.text);
             
@@ -190,7 +236,13 @@ async function performOCR() {
         ocrBtn.disabled = true;
         ocrBtn.textContent = '🔄 読み取り中...';
         
-        showLoading('ラベルを読み取っています...\n初回は30-40秒かかります（4言語対応）');
+        // スマホ向けの改善されたメッセージ
+        const isFirstTime = !wineOCR.isInitialized;
+        const loadingMsg = isFirstTime 
+            ? 'ラベルを読み取っています...\n初回は30-40秒かかります\n（4言語データ読み込み中）'
+            : 'ラベルを読み取っています...\n（10-15秒程度）';
+        
+        showLoading(loadingMsg);
 
         // OCR実行
         const ocrText = await wineOCR.recognizeText(app.photoData);
@@ -218,9 +270,11 @@ async function performOCR() {
                 <p style="color: #d32f2f; font-weight: bold;">❌ エラー</p>
                 <p style="font-size: 0.875rem; color: #666;">
                     読み取りに失敗しました。以下をお試しください：<br>
-                    • 明るい場所で撮影<br>
-                    • ラベル全体が写るように撮影<br>
-                    • ピントが合っているか確認
+                    • 明るい場所で撮影してください<br>
+                    • ラベル全体がはっきり写るように<br>
+                    • ピントが合っているか確認<br>
+                    • 斜めからではなく正面から撮影<br>
+                    • 画像が大きすぎる場合は時間がかかります
                 </p>
             </div>
         `;
