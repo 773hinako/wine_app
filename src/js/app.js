@@ -257,6 +257,13 @@ async function handlePhotoSelect(e) {
         return;
     }
 
+    // モバイルの写真アプリ保存はユーザー操作直後が成功しやすいため、先に実施
+    try {
+        await savePhotoToDevice(file);
+    } catch (err) {
+        console.warn('Sharing to Photos failed, will fallback later:', err);
+    }
+
     showLoading('画像を処理中...');
 
     try {
@@ -279,9 +286,6 @@ async function handlePhotoSelect(e) {
         const ocrResult = document.getElementById('ocr-result');
         ocrResult.style.display = 'none';
         ocrResult.innerHTML = '';
-
-        // 端末の写真アプリにも保存
-        await savePhotoToDevice(file);
 
         hideLoading();
         showToast('画像を追加しました', 'success');
@@ -342,24 +346,32 @@ function compressImage(file, maxWidth, quality) {
 // 端末の写真アプリに写真を保存
 async function savePhotoToDevice(file) {
     try {
-        // File System Access API対応確認（デスクトップブラウザ）
+        // デスクトップはスキップ（意図しない保存防止）
         if ('showSaveFilePicker' in window) {
-            // デスクトップブラウザの場合は自動保存しない（ユーザーの意図しない保存を防ぐ）
             console.log('Desktop browser detected - skipping auto-save');
             return;
         }
 
-        // Web Share API (レベル2) で画像を保存
+        // Web Share API Level 2 でシェアシートを開く（iOS/Android）
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            // モバイルデバイスの場合、ダウンロードリンクを使用
-            await downloadImageToDevice(file);
-            return;
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'Wine photo',
+                    text: 'Captured with Wine App'
+                });
+                console.log('Shared to system share sheet');
+                return; // シェア後は終了（ユーザーが「写真に保存」を選択可能）
+            } catch (shareErr) {
+                // ユーザーキャンセルや未対応時はフォールバック
+                console.warn('navigator.share failed or was cancelled:', shareErr);
+            }
         }
 
         // フォールバック: ダウンロードリンク方式
         await downloadImageToDevice(file);
     } catch (error) {
-        // エラーが発生しても処理を継続（写真保存は必須ではないため）
+        // エラーが発生しても処理を継続（アプリ内保存は別処理）
         console.warn('写真の端末保存に失敗しましたが、アプリ内には保存されています:', error);
     }
 }
