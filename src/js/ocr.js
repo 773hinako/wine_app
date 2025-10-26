@@ -14,7 +14,6 @@ class WineOCR {
             console.log('Tesseract.js初期化中（英語・フランス語・イタリア語・スペイン語）...');
             this.worker = await Tesseract.createWorker('eng+fra+ita+spa', 1, {
                 logger: m => {
-                    // 進捗状況をコンソールに出力（デバッグ用）
                     if (m.status === 'loading tesseract core' || 
                         m.status === 'loading language traineddata' ||
                         m.status === 'recognizing text') {
@@ -26,7 +25,16 @@ class WineOCR {
             console.log('Tesseract.js初期化完了（4言語対応）');
         } catch (error) {
             console.error('Tesseract.js初期化エラー:', error);
-            throw error;
+            // フォールバック: 英語のみで再試行
+            try {
+                console.warn('フォールバックとして英語のみで再試行します...');
+                this.worker = await Tesseract.createWorker('eng', 1);
+                this.isInitialized = true;
+                console.log('Tesseract.js初期化完了（英語のみ）');
+            } catch (fallbackErr) {
+                console.error('フォールバックも失敗:', fallbackErr);
+                throw error;
+            }
         }
     }
 
@@ -38,7 +46,6 @@ class WineOCR {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // 最大幅を1200pxに制限（スマホでの処理速度向上）
                 const maxWidth = 1200;
                 let width = img.width;
                 let height = img.height;
@@ -51,21 +58,22 @@ class WineOCR {
                 canvas.width = width;
                 canvas.height = height;
                 
-                // 画像を描画
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // コントラスト調整（OCR精度向上）
-                const imageData = ctx.getImageData(0, 0, width, height);
-                const data = imageData.data;
-                const factor = 1.2; // コントラスト係数
+                const imgData = ctx.getImageData(0, 0, width, height);
+                const data = imgData.data;
+                
+                // 端末向けにやや強めのコントラスト（iOS Safariはやや低コントラストになりやすい）
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                const factor = isIOS ? 1.3 : 1.2;
                 
                 for (let i = 0; i < data.length; i += 4) {
-                    data[i] = Math.min(255, data[i] * factor);     // R
-                    data[i + 1] = Math.min(255, data[i + 1] * factor); // G
-                    data[i + 2] = Math.min(255, data[i + 2] * factor); // B
+                    data[i] = Math.min(255, data[i] * factor);
+                    data[i + 1] = Math.min(255, data[i + 1] * factor);
+                    data[i + 2] = Math.min(255, data[i + 2] * factor);
                 }
                 
-                ctx.putImageData(imageData, 0, 0);
+                ctx.putImageData(imgData, 0, 0);
                 resolve(canvas.toDataURL('image/jpeg', 0.9));
             };
             img.onerror = reject;

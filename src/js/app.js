@@ -542,8 +542,13 @@ async function loadWineForEdit(wineId) {
 
     if (wine.photo) {
         document.getElementById('photo-preview').innerHTML = `<img src="${wine.photo}" alt="Preview">`;
+        // 既存写真がある場合はOCRボタンを表示
+        const ocrBtn = document.getElementById('ocr-btn');
+        if (ocrBtn) ocrBtn.style.display = 'inline-block';
     } else {
         document.getElementById('photo-preview').innerHTML = '<span class="photo-placeholder">📷 写真を追加</span>';
+        const ocrBtn = document.getElementById('ocr-btn');
+        if (ocrBtn) ocrBtn.style.display = 'none';
     }
 
     // テイスティングメモのロード
