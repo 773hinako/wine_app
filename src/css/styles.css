@@ -1390,30 +1390,14 @@ textarea:focus-visible {
     }
 }
 
-/* レスポンシブ対応 */
-@media (max-width: 480px) {
-    .photo-buttons {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-    
-    .btn-ocr,
-    .btn-secondary {
-        min-width: 100%;
-        padding: 0.875rem 1rem;
-        font-size: 1rem;
-    }
-    
-    .ocr-result {
-        padding: 0.875rem;
-        font-size: 0.9rem;
-    }
-    
-    .ocr-success h4 {
-        font-size: 1rem;
-    }
-    
-    .ocr-success p {
-        font-size: 0.875rem;
-    }
-}
+/* アクションシート */
+.action-sheet { position: fixed; inset: 0; z-index: 9999; }
+.action-sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.35); }
+.action-sheet-panel { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-top-left-radius: 16px; border-top-right-radius: 16px; padding: 1rem; box-shadow: 0 -10px 30px rgba(0,0,0,0.15); animation: slideUp .2s ease; }
+.action-sheet-title { margin: 0 0 .5rem; font-weight: 700; text-align: center; }
+.sheet-btn, .sheet-cancel { width: 100%; padding: .875rem 1rem; border-radius: 12px; border: 2px solid var(--border); background: var(--card-bg); margin: .375rem 0; font-size: 1rem; }
+.sheet-btn:active { transform: scale(.99); }
+.sheet-cancel { background: #fff; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.btn-tertiary { display:inline-block; padding:.6rem .9rem; border-radius:12px; border:2px solid var(--border); background: var(--card-bg); color: var(--text-primary); }

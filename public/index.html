@@ -88,11 +88,15 @@
                     <span class="photo-placeholder">📷 写真を追加</span>
                 </div>
                 <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+                <!-- ギャラリーから選ぶ用（カメラ強制しない） -->
+                <input type="file" id="gallery-input" accept="image/*" style="display: none;">
                 <div class="photo-buttons">
                     <button type="button" id="photo-btn" class="btn-secondary">📷 写真を撮影/選択</button>
                     <button type="button" id="ocr-btn" class="btn-ocr" style="display: none;">🔍 ラベルを読み取る</button>
                 </div>
                 <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">カメラで撮影、またはギャラリーから既存の写真を選択できます</p>
+                <!-- 端末の写真アプリへ保存（共有） -->
+                <button type="button" id="save-photo-btn" class="btn-tertiary" style="display:none; margin-top: 0.5rem;">💾 端末に保存</button>
                 <div id="ocr-result" class="ocr-result" style="display: none;"></div>
             </div>
 
@@ -311,6 +315,17 @@
 
     <!-- インポート用の隠しファイル入力 -->
     <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+    <!-- 写真ソース選択のアクションシート -->
+    <div id="photo-source-sheet" class="action-sheet" style="display:none;">
+        <div class="action-sheet-backdrop" id="photo-source-backdrop"></div>
+        <div class="action-sheet-panel">
+            <h3 class="action-sheet-title">写真の取得方法</h3>
+            <button class="sheet-btn" id="choose-camera">📷 カメラで撮影</button>
+            <button class="sheet-btn" id="choose-gallery">🖼️ ギャラリーから選択</button>
+            <button class="sheet-cancel" id="choose-cancel">キャンセル</button>
+        </div>
+    </div>
 
     <!-- Tesseract.js for OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>

@@ -66,13 +66,31 @@ function setupEventListeners() {
     });
 
     document.getElementById('photo-btn').addEventListener('click', () => {
-        document.getElementById('photo-input').click();
+        openPhotoSourceSheet();
     });
 
     document.getElementById('photo-input').addEventListener('change', handlePhotoSelect);
+    const galleryInput = document.getElementById('gallery-input');
+    if (galleryInput) {
+        galleryInput.addEventListener('change', handlePhotoSelect);
+    }
 
     // OCRボタン
     document.getElementById('ocr-btn').addEventListener('click', performOCR);
+
+    // 端末保存ボタン
+    const saveBtn = document.getElementById('save-photo-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            if (!app.photoData) {
+                showToast('先に写真を追加してください', 'error');
+                return;
+            }
+            const file = await dataUrlToFile(app.photoData, 'wine_photo.jpg');
+            await savePhotoToDevice(file);
+            showToast('端末に保存を実行しました', 'success');
+        });
+    }
 
     document.getElementById('wine-form').addEventListener('submit', handleFormSubmit);
 
