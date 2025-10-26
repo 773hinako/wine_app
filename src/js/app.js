@@ -71,6 +71,9 @@ function setupEventListeners() {
 
     document.getElementById('photo-input').addEventListener('change', handlePhotoSelect);
 
+    // OCRボタン
+    document.getElementById('ocr-btn').addEventListener('click', performOCR);
+
     document.getElementById('wine-form').addEventListener('submit', handleFormSubmit);
 
     // 星評価
@@ -268,6 +271,18 @@ async function handlePhotoSelect(e) {
         const preview = document.getElementById('photo-preview');
         preview.innerHTML = `<img src="${app.photoData}" alt="Preview">`;
 
+        // OCRボタンを表示
+        const ocrBtn = document.getElementById('ocr-btn');
+        ocrBtn.style.display = 'inline-block';
+
+        // OCR結果をリセット
+        const ocrResult = document.getElementById('ocr-result');
+        ocrResult.style.display = 'none';
+        ocrResult.innerHTML = '';
+
+        // 端末の写真アプリにも保存
+        await savePhotoToDevice(file);
+
         hideLoading();
         showToast('画像を追加しました', 'success');
     } catch (error) {
@@ -321,6 +336,66 @@ function compressImage(file, maxWidth, quality) {
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
+    });
+}
+
+// 端末の写真アプリに写真を保存
+async function savePhotoToDevice(file) {
+    try {
+        // File System Access API対応確認（デスクトップブラウザ）
+        if ('showSaveFilePicker' in window) {
+            // デスクトップブラウザの場合は自動保存しない（ユーザーの意図しない保存を防ぐ）
+            console.log('Desktop browser detected - skipping auto-save');
+            return;
+        }
+
+        // Web Share API (レベル2) で画像を保存
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            // モバイルデバイスの場合、ダウンロードリンクを使用
+            await downloadImageToDevice(file);
+            return;
+        }
+
+        // フォールバック: ダウンロードリンク方式
+        await downloadImageToDevice(file);
+    } catch (error) {
+        // エラーが発生しても処理を継続（写真保存は必須ではないため）
+        console.warn('写真の端末保存に失敗しましたが、アプリ内には保存されています:', error);
+    }
+}
+
+// 画像をダウンロードして端末に保存
+function downloadImageToDevice(file) {
+    return new Promise((resolve) => {
+        try {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // タイムスタンプ付きファイル名を生成
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const fileName = `wine_photo_${timestamp}.jpg`;
+
+                // ダウンロードリンクを作成
+                const link = document.createElement('a');
+                link.href = e.target.result;
+                link.download = fileName;
+                link.style.display = 'none';
+                
+                // DOM に追加して自動クリック
+                document.body.appendChild(link);
+                link.click();
+                
+                // クリーンアップ
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    resolve();
+                }, 100);
+            };
+            reader.onerror = () => resolve(); // エラーでも続行
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.warn('Download link creation failed:', error);
+            resolve(); // エラーでも続行
+        }
     });
 }
 
@@ -415,6 +490,11 @@ function resetForm() {
     document.getElementById('edit-title').textContent = '新規記録';
     app.photoData = null;
     app.photoThumbnail = null;
+
+    // OCRボタンと結果を非表示
+    document.getElementById('ocr-btn').style.display = 'none';
+    document.getElementById('ocr-result').style.display = 'none';
+    document.getElementById('ocr-result').innerHTML = '';
 
     // テイスティングフィールドをリセット
     document.querySelectorAll('input[name="aroma"]').forEach(cb => cb.checked = false);

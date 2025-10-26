@@ -1268,3 +1268,113 @@ textarea:focus-visible {
     text-shadow: 0 2px 4px rgba(255, 158, 205, 0.2);
     animation: pulse 1.5s ease-in-out infinite;
 }
+
+/* ========================================
+   OCR機能のスタイル
+======================================== */
+
+/* 写真ボタンのコンテナ */
+.photo-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* OCRボタン */
+.btn-ocr {
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #A8E6CF 0%, #85D4B5 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(168, 230, 207, 0.4);
+    transition: all 0.3s ease;
+    font-family: 'Quicksand', sans-serif;
+    flex: 1;
+    min-width: 180px;
+}
+
+.btn-ocr:hover {
+    background: linear-gradient(135deg, #85D4B5 0%, #6BC4A0 100%);
+    box-shadow: 0 6px 20px rgba(168, 230, 207, 0.6);
+    transform: translateY(-2px);
+}
+
+.btn-ocr:active {
+    transform: translateY(0);
+}
+
+.btn-ocr:disabled {
+    background: linear-gradient(135deg, #ccc 0%, #aaa 100%);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* OCR結果表示エリア */
+.ocr-result {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+.ocr-success h4 {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+}
+
+.ocr-success p {
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.ocr-error {
+    padding: 1rem;
+    background: #ffebee;
+    border: 2px solid #ffcdd2;
+    border-radius: 8px;
+}
+
+/* 詳細表示の折りたたみ */
+.ocr-result details summary {
+    font-weight: 600;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.ocr-result details summary:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* スライドダウンアニメーション */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+    .photo-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-ocr {
+        min-width: 100%;
+    }
+}

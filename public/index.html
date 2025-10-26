@@ -87,9 +87,13 @@
                 <div id="photo-preview" class="photo-preview">
                     <span class="photo-placeholder">📷 写真を追加</span>
                 </div>
-                <input type="file" id="photo-input" accept="image/*" style="display: none;">
-                <button type="button" id="photo-btn" class="btn-secondary">📷 写真を撮影/選択</button>
+                <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+                <div class="photo-buttons">
+                    <button type="button" id="photo-btn" class="btn-secondary">📷 写真を撮影/選択</button>
+                    <button type="button" id="ocr-btn" class="btn-ocr" style="display: none;">🔍 ラベルを読み取る</button>
+                </div>
                 <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">カメラで撮影、またはギャラリーから既存の写真を選択できます</p>
+                <div id="ocr-result" class="ocr-result" style="display: none;"></div>
             </div>
 
             <div class="form-group">
@@ -308,9 +312,13 @@
     <!-- インポート用の隠しファイル入力 -->
     <input type="file" id="import-file-input" accept=".json" style="display: none;">
 
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    
     <script src="../src/js/db.js"></script>
     <script src="../src/js/features.js"></script>
     <script src="../src/js/auto-backup.js"></script>
+    <script src="../src/js/ocr.js"></script>
     <script src="../src/js/app.js"></script>
 </body>
 </html>
